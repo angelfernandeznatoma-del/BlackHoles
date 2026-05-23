@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>theCHILINEBULAE — 4D Tesseract (Safe Mode)</title>
+<style>
+  body { margin: 0; overflow: hidden; background: black; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+<script>
+// ------------------------------------------------------------
+// BASIC SETUP
+// ------------------------------------------------------------
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 1000);
+camera.position.z = 6;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+// ------------------------------------------------------------
+// 4D TESSERACT DATA
+// ------------------------------------------------------------
+const vertices4D = [];
+for (let x of [-1, 1]) for (let y of [-1, 1])
+for (let z of [-1, 1]) for (let w of [-1, 1])
+    vertices4D.push(new THREE.Vector4(x, y, z, w));
+
+const edges = [];
+for (let i = 0; i < vertices4D.length; i++) {
+  for (let j = i + 1; j < vertices4D.length; j++) {
+    let diff = 0;
+    for (let k = 0; k < 4; k++)
+      if (vertices4D[i].getComponent(k) !== vertices4D[j].getComponent(k)) diff++;
+    if (diff === 1) edges.push([i, j]);
+  }
+}
+
+const geo = new THREE.BufferGeometry();
+const pos = new Float32Array(edges.length * 2 * 3);
+geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+
+const mat = new THREE.LineBasicMaterial({ color: 0xff66ff, linewidth: 3 });
+const tesseract = new THREE.LineSegments(geo, mat);
+scene.add(tesseract);
+
+// ------------------------------------------------------------
+// 4D ROTATION + PROJECTION
+// ------------------------------------------------------------
+function rotate4D(v, aXY, aZW) {
+  const x = v.x, y = v.y, z = v.z, w = v.w;
+
+  const c1 = Math.cos(aXY), s1 = Math.sin(aXY);
+  const x1 = x * c1 - y * s1;
+  const y1 = x * s1 + y * c1;
+
+  const c2 = Math.cos(aZW), s2 = Math.sin(aZW);
+  const z1 = z * c2 - w * s2;
+  const w1 = z * s2 + w * c2;
+
+  return new THREE.Vector4(x1, y1, z1, w1);
+}
+
+function project4Dto3D(v4, d = 3.0) {
+  const f = d / (d - v4.w);
+  return new THREE.Vector3(v4.x * f, v4.y * f, v4.z * f);
+}
+
+// ------------------------------------------------------------
+// ANIMATION LOOP
+// ------------------------------------------------------------
+let t = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  t += 0.01;
+
+  const aXY = t * 0.7;
+  const aZW = t * 1.1;
+
+  const posAttr = tesseract.geometry.attributes.position;
+  let idx = 0;
+
+  for (let e = 0; e < edges.length; e++) {
+    const [i, j] = edges[e];
+
+    const vA = project4Dto3D(rotate4D(vertices4D[i], aXY, aZW));
+    const vB = project4Dto3D(rotate4D(vertices4D[j], aXY, aZW));
+
+    pos[idx++] = vA.x; pos[idx++] = vA.y; pos[idx++] = vA.z;
+    pos[idx++] = vB.x; pos[idx++] = vB.y; pos[idx++] = vB.z;
+  }
+
+  posAttr.needsUpdate = true;
+
+  mat.color.setHSL((Math.sin(t*0.5)+1)/2, 0.8, 0.6);
+
+  camera.position.x = Math.sin(t*0.3)*1.2;
+  camera.position.y = Math.cos(t*0.2)*0.8;
+  camera.lookAt(0,0,0);
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+window.addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+
+</body>
+</html>
