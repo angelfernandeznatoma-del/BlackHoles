@@ -1,121 +1,205 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>theCHILINEBULAE — 4D Tesseract (Safe Mode)</title>
-<style>
-  body { margin: 0; overflow: hidden; background: black; }
-  canvas { display: block; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#080d13">
+  <title>The Monkey Star — A 4D Tesseract</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #080d13; color: #f2f6ef; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; background: radial-gradient(circle at 65% 35%, #153629 0, #0b171b 38%, #080d13 75%); }
+    .shell { width: min(1280px, 100%); min-height: 100vh; min-height: 100dvh; margin: auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(290px, 340px); gap: clamp(16px, 3vw, 40px); padding: clamp(18px, 4vw, 48px); align-items: center; }
+    header { grid-column: 1 / -1; align-self: end; }
+    .eyebrow { color: #8ce6aa; text-transform: uppercase; letter-spacing: .2em; font-size: .72rem; font-weight: 800; margin: 0 0 10px; }
+    h1 { font-size: clamp(2.3rem, 6vw, 5.4rem); line-height: .96; letter-spacing: -.055em; margin: 0; }
+    .intro { max-width: 640px; line-height: 1.6; color: #b8c9c6; margin: 18px 0 0; }
+    .stage { position: relative; min-height: 360px; height: min(62vh, 680px); border: 1px solid #315447; border-radius: 24px; overflow: hidden; background: radial-gradient(circle, #1b423a55, #09131a 66%); box-shadow: 0 20px 70px #0007, inset 0 0 80px #69e9a009; touch-action: none; cursor: grab; }
+    .stage:active { cursor: grabbing; }
+    .stage canvas { display: block; width: 100%; height: 100%; }
+    .stage-label { position: absolute; left: 20px; bottom: 18px; color: #aac9bc; font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; pointer-events: none; }
+    .status { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; color: #e8f7ed; background: #0b171be8; line-height: 1.5; }
+    .status[hidden] { display: none; }
+    .panel { align-self: center; padding: 26px; border: 1px solid #365348; border-radius: 24px; background: #12221fdc; box-shadow: 0 15px 55px #0005; }
+    h2 { font-size: 1.1rem; margin: 0 0 16px; }
+    .panel p { color: #b8c9c6; line-height: 1.55; font-size: .93rem; }
+    .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 23px 0 26px; }
+    button { min-height: 48px; border: 1px solid #6ba58a; border-radius: 12px; color: #ebfff0; background: #275947; font: inherit; font-weight: 700; cursor: pointer; }
+    button:hover { background: #347456; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #d8ee83; outline-offset: 3px; }
+    button.secondary { background: transparent; }
+    button.secondary:hover { background: #244139; }
+    button:disabled, input:disabled { opacity: .45; cursor: not-allowed; }
+    .range-head { display: flex; justify-content: space-between; gap: 12px; font-weight: 700; font-size: .9rem; }
+    output { color: #a8ecad; font-variant-numeric: tabular-nums; }
+    input[type=range] { display: block; width: 100%; height: 44px; margin: 7px 0 2px; accent-color: #91e8a7; cursor: pointer; }
+    .ends { display: flex; justify-content: space-between; color: #99b1aa; font-size: .76rem; }
+    .hint { border-top: 1px solid #365348; padding-top: 18px; margin: 23px 0 0; }
+    footer { grid-column: 1 / -1; color: #8ca9a0; font-size: .82rem; align-self: start; }
+    @media (max-width: 800px) { .shell { display: flex; flex-direction: column; align-items: stretch; gap: 18px; } .stage { height: min(54vh, 540px); min-height: 320px; } .panel { padding: 20px; } footer { padding-bottom: 12px; } }
+    @media (max-width: 430px) { .stage { height: 42vh; min-height: 280px; border-radius: 18px; } .buttons { margin: 16px 0 20px; } }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+  </style>
 </head>
 <body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">Interactive geometry · The Monkey Star</p>
+      <h1>A window into the fourth dimension.</h1>
+      <p class="intro">Meet the tesseract: a four-dimensional cousin of the cube. Its 16 corners and 32 edges rotate through two 4D planes, then project into the 3D scene you can explore here.</p>
+    </header>
+    <div class="stage" id="stage" aria-label="Interactive rotating 4D tesseract. Drag to change the viewing angle.">
+      <div class="stage-label" aria-hidden="true">4D → 3D projection</div>
+      <div class="status" id="status" role="status">Loading the tesseract…</div>
+    </div>
+    <section class="panel" aria-labelledby="controls-title">
+      <h2 id="controls-title">Explore the shape</h2>
+      <p>As the shape turns, the inner and outer cubes seem to exchange places. That motion is the fourth-dimensional rotation made visible.</p>
+      <div class="buttons">
+        <button id="toggle" type="button" disabled>Pause</button>
+        <button id="restart" class="secondary" type="button" disabled>Restart</button>
+      </div>
+      <label class="range-head" for="speed"><span>Rotation speed</span><output id="speed-value" for="speed">1.0×</output></label>
+      <input id="speed" type="range" min="0" max="2.5" step="0.1" value="1" disabled>
+      <div class="ends"><span>Still</span><span>Fast</span></div>
+      <p class="hint">Drag with a finger or mouse to orbit the view. Pause to study a single moment; restart returns to the opening angle.</p>
+    </section>
+    <footer>Inspired by the original Three.js tesseract experiment.</footer>
+  </main>
+  <script>
+    (() => {
+      const status = document.getElementById('status');
+      const stage = document.getElementById('stage');
+      const toggle = document.getElementById('toggle');
+      const restart = document.getElementById('restart');
+      const speed = document.getElementById('speed');
+      const speedValue = document.getElementById('speed-value');
+      const sources = [
+        'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js',
+        'https://unpkg.com/three@0.160.0/build/three.min.js'
+      ];
+      function fail(message) {
+        status.textContent = message;
+        status.hidden = false;
+      }
+      function loadThree(index = 0) {
+        if (index >= sources.length) {
+          fail('Three.js could not load. Check your connection or content blocker, then reload this page.');
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = sources[index];
+        script.async = true;
+        script.onload = () => {
+          if (window.THREE) init();
+          else loadThree(index + 1);
+        };
+        script.onerror = () => loadThree(index + 1);
+        document.head.appendChild(script);
+      }
+      function init() {
+        try {
+          const THREE = window.THREE;
+          const scene = new THREE.Scene();
+          const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 1000);
+          const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          stage.insertBefore(renderer.domElement, stage.firstChild);
 
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-
-<script>
-// ------------------------------------------------------------
-// BASIC SETUP
-// ------------------------------------------------------------
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 1000);
-camera.position.z = 6;
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(devicePixelRatio);
-document.body.appendChild(renderer.domElement);
-
-// ------------------------------------------------------------
-// 4D TESSERACT DATA
-// ------------------------------------------------------------
-const vertices4D = [];
-for (let x of [-1, 1]) for (let y of [-1, 1])
-for (let z of [-1, 1]) for (let w of [-1, 1])
-    vertices4D.push(new THREE.Vector4(x, y, z, w));
-
-const edges = [];
-for (let i = 0; i < vertices4D.length; i++) {
-  for (let j = i + 1; j < vertices4D.length; j++) {
-    let diff = 0;
-    for (let k = 0; k < 4; k++)
-      if (vertices4D[i].getComponent(k) !== vertices4D[j].getComponent(k)) diff++;
-    if (diff === 1) edges.push([i, j]);
-  }
-}
-
-const geo = new THREE.BufferGeometry();
-const pos = new Float32Array(edges.length * 2 * 3);
-geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-
-const mat = new THREE.LineBasicMaterial({ color: 0xff66ff, linewidth: 3 });
-const tesseract = new THREE.LineSegments(geo, mat);
-scene.add(tesseract);
-
-// ------------------------------------------------------------
-// 4D ROTATION + PROJECTION
-// ------------------------------------------------------------
-function rotate4D(v, aXY, aZW) {
-  const x = v.x, y = v.y, z = v.z, w = v.w;
-
-  const c1 = Math.cos(aXY), s1 = Math.sin(aXY);
-  const x1 = x * c1 - y * s1;
-  const y1 = x * s1 + y * c1;
-
-  const c2 = Math.cos(aZW), s2 = Math.sin(aZW);
-  const z1 = z * c2 - w * s2;
-  const w1 = z * s2 + w * c2;
-
-  return new THREE.Vector4(x1, y1, z1, w1);
-}
-
-function project4Dto3D(v4, d = 3.0) {
-  const f = d / (d - v4.w);
-  return new THREE.Vector3(v4.x * f, v4.y * f, v4.z * f);
-}
-
-// ------------------------------------------------------------
-// ANIMATION LOOP
-// ------------------------------------------------------------
-let t = 0;
-function animate() {
-  requestAnimationFrame(animate);
-  t += 0.01;
-
-  const aXY = t * 0.7;
-  const aZW = t * 1.1;
-
-  const posAttr = tesseract.geometry.attributes.position;
-  let idx = 0;
-
-  for (let e = 0; e < edges.length; e++) {
-    const [i, j] = edges[e];
-
-    const vA = project4Dto3D(rotate4D(vertices4D[i], aXY, aZW));
-    const vB = project4Dto3D(rotate4D(vertices4D[j], aXY, aZW));
-
-    pos[idx++] = vA.x; pos[idx++] = vA.y; pos[idx++] = vA.z;
-    pos[idx++] = vB.x; pos[idx++] = vB.y; pos[idx++] = vB.z;
-  }
-
-  posAttr.needsUpdate = true;
-
-  mat.color.setHSL((Math.sin(t*0.5)+1)/2, 0.8, 0.6);
-
-  camera.position.x = Math.sin(t*0.3)*1.2;
-  camera.position.y = Math.cos(t*0.2)*0.8;
-  camera.lookAt(0,0,0);
-
-  renderer.render(scene, camera);
-}
-
-animate();
-
-window.addEventListener("resize", () => {
-  camera.aspect = innerWidth / innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth, innerHeight);
-});
-</script>
-
+          // Preserve the original 16 vertices, 32 edges, XY/ZW rotations and 4D perspective projection.
+          const vertices4D = [];
+          for (const x of [-1, 1]) for (const y of [-1, 1])
+            for (const z of [-1, 1]) for (const w of [-1, 1])
+              vertices4D.push(new THREE.Vector4(x, y, z, w));
+          const edges = [];
+          for (let i = 0; i < vertices4D.length; i++) {
+            for (let j = i + 1; j < vertices4D.length; j++) {
+              let diff = 0;
+              for (let k = 0; k < 4; k++)
+                if (vertices4D[i].getComponent(k) !== vertices4D[j].getComponent(k)) diff++;
+              if (diff === 1) edges.push([i, j]);
+            }
+          }
+          const positions = new Float32Array(edges.length * 2 * 3);
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+          const material = new THREE.LineBasicMaterial({ color: 0x9df3ae, transparent: true, opacity: .95 });
+          const tesseract = new THREE.LineSegments(geometry, material);
+          scene.add(tesseract);
+          function rotate4D(v, aXY, aZW) {
+            const c1 = Math.cos(aXY), s1 = Math.sin(aXY);
+            const c2 = Math.cos(aZW), s2 = Math.sin(aZW);
+            return new THREE.Vector4(v.x * c1 - v.y * s1, v.x * s1 + v.y * c1,
+              v.z * c2 - v.w * s2, v.z * s2 + v.w * c2);
+          }
+          function project4Dto3D(v, d = 3) {
+            const f = d / (d - v.w);
+            return new THREE.Vector3(v.x * f, v.y * f, v.z * f);
+          }
+          let elapsed = 0, lastFrame = 0, paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
+          let yaw = 0, pitch = 0, pointer = null;
+          function resize() {
+            const width = stage.clientWidth, height = stage.clientHeight;
+            if (!width || !height) return;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height, false);
+          }
+          function draw() {
+            const aXY = elapsed * .7, aZW = elapsed * 1.1;
+            let index = 0;
+            for (const [i, j] of edges) {
+              const a = project4Dto3D(rotate4D(vertices4D[i], aXY, aZW));
+              const b = project4Dto3D(rotate4D(vertices4D[j], aXY, aZW));
+              positions[index++] = a.x; positions[index++] = a.y; positions[index++] = a.z;
+              positions[index++] = b.x; positions[index++] = b.y; positions[index++] = b.z;
+            }
+            geometry.attributes.position.needsUpdate = true;
+            material.color.setHSL(.36 + .08 * Math.sin(elapsed * .5), .74, .68);
+            camera.position.set(Math.sin(yaw) * Math.cos(pitch) * 6,
+              Math.sin(pitch) * 6, Math.cos(yaw) * Math.cos(pitch) * 6);
+            camera.lookAt(0, 0, 0);
+            renderer.render(scene, camera);
+          }
+          function frame(now) {
+            if (lastFrame && !paused && !document.hidden)
+              elapsed += Math.min((now - lastFrame) / 1000, .05) * Number(speed.value);
+            lastFrame = now;
+            draw();
+            requestAnimationFrame(frame);
+          }
+          toggle.disabled = restart.disabled = speed.disabled = false;
+          toggle.textContent = paused ? 'Resume' : 'Pause';
+          toggle.addEventListener('click', () => { paused = !paused; toggle.textContent = paused ? 'Resume' : 'Pause'; });
+          restart.addEventListener('click', () => { elapsed = yaw = pitch = 0; draw(); });
+          speed.addEventListener('input', () => { speedValue.value = Number(speed.value).toFixed(1) + '×'; });
+          stage.addEventListener('pointerdown', event => {
+            if (event.target !== renderer.domElement) return;
+            pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+            stage.setPointerCapture(event.pointerId);
+          });
+          stage.addEventListener('pointermove', event => {
+            if (!pointer || pointer.id !== event.pointerId) return;
+            yaw += (event.clientX - pointer.x) * .008;
+            pitch = Math.max(-1.35, Math.min(1.35, pitch + (event.clientY - pointer.y) * .008));
+            pointer.x = event.clientX; pointer.y = event.clientY;
+            if (paused) draw();
+          });
+          const endDrag = event => { if (pointer && pointer.id === event.pointerId) pointer = null; };
+          stage.addEventListener('pointerup', endDrag);
+          stage.addEventListener('pointercancel', endDrag);
+          if ('ResizeObserver' in window) new ResizeObserver(resize).observe(stage);
+          else window.addEventListener('resize', resize);
+          resize();
+          status.hidden = true;
+          requestAnimationFrame(frame);
+        } catch (error) {
+          console.error('Tesseract initialization failed:', error);
+          fail('This browser could not start the 3D view. Try enabling WebGL or opening the page in a modern browser.');
+        }
+      }
+      loadThree();
+    })();
+  </script>
 </body>
 </html>
